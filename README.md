@@ -15,7 +15,7 @@ python3 main.py --img_path img/fox.jpg
 ```
 
 ## 使用例とボタンの説明
-###　サンプル画像における使用例
+### サンプル画像における使用例
 <div align="center">
     <img src="gif/usage.gif">
 </div>
