@@ -1,4 +1,8 @@
 # GUI_NearestNeighborSegmentation
+<div align="center">
+    <img src="gif/usage.gif">
+</div>
+
 最近傍識別による領域分割のGUIアプリケーションです。  
 TkinterとNumpyとPillowで動きます。
 
@@ -20,11 +24,6 @@ cd GUI_NearestNeighborSegmentation
 # サンプル画像での例
 python3 main.py --img_path img/fox.jpg
 ```
-
-## 使用例
-<div align="center">
-    <img src="gif/usage.gif">
-</div>
 
 ## ボタンの説明
 画面上をドラッグすると矩形が描画され、矩形内部の画素を指定されたラベル（前景/背景）の事例として記録します。  
