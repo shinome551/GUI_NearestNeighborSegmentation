@@ -7,13 +7,11 @@ Pythonで動きます。
 git clone https://github.com/shinome551/GUI_NearestNeighborSegmentation.git
 cd GUI_NearestNeighborSegmentation
 ```
-
 ```
 # main.pyの引数として画像のパスを与える
 # python3 main.py --img_path [img_path]
 # サンプル画像での例
 python3 main.py --img_path img/fox.jpg
-
 ```
 
 ## 使用例
