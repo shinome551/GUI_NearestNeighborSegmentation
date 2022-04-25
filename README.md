@@ -4,7 +4,7 @@
 </div>
 
 最近傍識別による領域分割のGUIアプリケーションです。  
-TkinterとNumpyとPillowで動きます。
+tkinterとNumpyとPillowで動きます。
 
 ## 実行環境
 ```
@@ -12,8 +12,21 @@ Python  3.9.12
 numpy   1.22.3
 Pillow  8.4.0
 ```
+- tkinterが使えない場合  
+```
+# for ubuntu
+sudo apt-get install python3-tk
+sudo apt-get install tk-dev
+```
+
+```
+# for mac
+brew install python-tk@3.9
+```
 
 ## 利用方法
+
+
 ```
 git clone https://github.com/shinome551/GUI_NearestNeighborSegmentation.git
 cd GUI_NearestNeighborSegmentation
