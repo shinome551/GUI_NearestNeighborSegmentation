@@ -31,7 +31,7 @@ python3 main.py --img_path img/fox.jpg
 「Segmentation ON」ボタンを押すことで、記録された事例を元に画像上の画素を分類し、領域分割を実行します。  
 
 - Segmentation ON/OFFボタン（トグルボタン）  
-「Segmentation ON」を押すと領域分割が行われ、画像上に領域マスクが描画されます。「Segmentation OFF」を押すと領域マスクが除去されます。
+「Segmentation ON」を押すと領域分割が行われ、画像上に領域マスクが描画されます。「Segmentation OFF」を押すと領域マスクが除去されます（事例は記録されたままです）。
 
 - Resetボタン  
 記録された事例が初期化され、領域マスクが描画されていれば除去されます。また、ラジオボタンの状態が前景に初期化されます。
