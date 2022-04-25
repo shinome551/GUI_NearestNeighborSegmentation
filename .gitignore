@@ -130,3 +130,4 @@ dmypy.json
 
 
 !utils.cpython-39-darwin.so
+!utils.cpython-38-x86_64-linux-gnu.so
