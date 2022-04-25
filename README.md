@@ -1,6 +1,13 @@
 # GUI_NearestNeighborSegmentation
 最近傍識別による領域分割のGUIアプリケーションです。  
-Pythonで動きます。
+TkinterとNumpyとPillowで動きます。
+
+## 実行環境
+```
+Python  3.9.12
+numpy   1.22.3
+Pillow  8.4.0
+```
 
 ## 利用方法
 ```
@@ -14,13 +21,12 @@ cd GUI_NearestNeighborSegmentation
 python3 main.py --img_path img/fox.jpg
 ```
 
-## 使用例とボタンの説明
-### サンプル画像における使用例
+## 使用例
 <div align="center">
     <img src="gif/usage.gif">
 </div>
 
-### ボタンの説明
+## ボタンの説明
 画面上をドラッグすると矩形が描画され、矩形内部の画素を前景または背景の事例として記録します。  
 「Segmentation ON」ボタンを押すことで、記録された事例を元に画像上の画素を分類し、領域分割を実行します。  
 
