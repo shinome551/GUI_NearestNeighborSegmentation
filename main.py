@@ -12,11 +12,15 @@ from cy.utils import updateLUT
 
 class Application(tkinter.Frame):
     label2color = np.array([
-        [  0,   0,   0], # no label(initial state)
-        [255,   0,   0], # background
+        [255,   0,   0], # background(initial label)
         [  0, 255,   0], # foreground1
         [  0,   0, 255]  # foreground2(not implemented)
     ])
+    label2colorname = [
+        'red', # background(initial label)
+        'green', # foreground1
+        'blue'  # foreground2(not implemented)
+    ]
 
     def __init__(self, img, master=None):
         super().__init__(master)
@@ -24,7 +28,7 @@ class Application(tkinter.Frame):
         self.master = master
         self.master.title('Nearest Neighbor Segmentation')
         self.resize_ratio = 1.0
-        self.label = tkinter.IntVar(value=2) # initialize label to foreground1
+        self.label = tkinter.IntVar(value=1) # initialize label to foreground1
 
         self.pack()
         self.create_widgets()
@@ -33,10 +37,10 @@ class Application(tkinter.Frame):
 
     def create_widgets(self):
         # botton
-        self.segmentation_button = tkinter.Button(self, 
-            text='Segmentation ON',
-            command=self.segmentation())
-        self.segmentation_button.grid(row=0, column=1)
+        self.mask_toggle_button = tkinter.Button(self, 
+            text='Visualize Mask',
+            command=self.toggleSegmentationMask())
+        self.mask_toggle_button.grid(row=0, column=1)
 
         self.reset_button = tkinter.Button(self, 
             text='Reset',
@@ -45,13 +49,13 @@ class Application(tkinter.Frame):
 
         self.label_radio_1 = tkinter.Radiobutton(self,
             text="Background",
-            value=1,
+            value=0,
             variable=self.label)
         self.label_radio_1.grid(row=2, column=1)
 
         self.label_radio_2 = tkinter.Radiobutton(self,
             text="Foreground",
-            value=2,
+            value=1,
             variable=self.label)
         self.label_radio_2.grid(row=3, column=1)
 
@@ -61,28 +65,22 @@ class Application(tkinter.Frame):
 
         self.canvas.bind("<ButtonPress-1>", self.getPressPoint())
         self.canvas.bind("<Button1-Motion>", self.drawRectangle())
-        self.canvas.bind("<ButtonRelease-1>", self.registerLabel())
+        self.canvas.bind("<ButtonRelease-1>", self.registerExamplewithLabel())
     
         self.canvas.photo = ImageTk.PhotoImage(self.img)
         self.image_on_canvas = self.canvas.create_image(0, 0, anchor='nw', image=self.canvas.photo)
 
 
-    def segmentation(self):
+    def toggleSegmentationMask(self):
         def hook():
-            if self.segmentation_button.config('text')[-1] == 'Segmentation ON':   
-                # show segmentation mask     
-                updateLUT(self.dlut, self.tlut)
-                r, g, b = np.split(np.array(self.img), 3, axis=2)
-                img_label_np = self.tlut[r, g, b][:, :, 0]
-                img_segmented_np = np.take(Application.label2color, img_label_np, axis=0).astype(np.uint8)
-                img_out = Image.blend(self.img, Image.fromarray(img_segmented_np), 0.5)
-                self.segmentation_button.config(text='Segmentation OFF')
+            if self.mask_toggle_button.config('text')[-1] == 'Visualize Mask': 
+                self.segmentation()
+                self.mask_toggle_button.config(text='Hide Mask')
             else:
-                # show original image
-                img_out = self.img
-                self.segmentation_button.config(text='Segmentation ON')
-            self.canvas.photo = ImageTk.PhotoImage(img_out)
-            self.canvas.itemconfig(self.image_on_canvas, image=self.canvas.photo)
+                self.canvas.photo = ImageTk.PhotoImage(self.img)
+                self.canvas.itemconfig(self.image_on_canvas, image=self.canvas.photo)
+                self.mask_toggle_button.config(text='Visualize Mask')
+
         return hook
 
 
@@ -94,7 +92,8 @@ class Application(tkinter.Frame):
                 event.y,
                 event.x + 1,
                 event.y + 1,
-                outline="red",
+                outline=Application.label2colorname[self.label.get()],
+                width=3,
                 tag="rect1")  
             self.start_x, self.start_y = event.x, event.y
         return hook
@@ -108,24 +107,38 @@ class Application(tkinter.Frame):
         return hook
 
 
-    def registerLabel(self):
+    def registerExamplewithLabel(self):
         def hook(event):
             coords = [
                 round(n * self.resize_ratio) for n in self.canvas.coords("rect1")
             ]
-            if (coords[2] - coords[0]) * (coords[3] - coords[1]) > 0 and self.label.get() != 0:
+            if (coords[2] - coords[0]) * (coords[3] - coords[1]) > 0:
                 img_crop_np = np.array(self.img.crop(coords), dtype=np.uint8)
                 r, g, b = np.split(img_crop_np, 3, axis=2)
                 self.dlut[r, g, b] = 0
                 self.tlut[r, g, b] = self.label.get()
+                updateLUT(self.dlut, self.tlut)
+
+            self.segmentation()
+            self.mask_toggle_button.config(text='Hide Mask')
         return hook
+
+
+    def segmentation(self):
+        r, g, b = np.split(np.array(self.img), 3, axis=2)
+        img_label_np = self.tlut[r, g, b][:, :, 0]
+        img_segmented_np = np.take(Application.label2color, img_label_np, axis=0).astype(np.uint8)
+        img_out = Image.blend(self.img, Image.fromarray(img_segmented_np), 0.5)
+        self.canvas.photo = ImageTk.PhotoImage(img_out)
+        self.canvas.itemconfig(self.image_on_canvas, image=self.canvas.photo)
 
 
     def reset(self):
         def hook():
-            self.label.set(2)
+            self.label.set(1)
             self.dlut = np.ones((256,256,256), dtype=np.uint16) * 255 * 3  ## initialize max distance
             self.tlut = np.zeros((256,256,256), dtype=np.uint8)
+            self.mask_toggle_button.config(text='Visualize Mask')
             self.canvas.delete("rect1")
             self.canvas.photo = ImageTk.PhotoImage(self.img)
             self.canvas.itemconfig(self.image_on_canvas, image=self.canvas.photo)
