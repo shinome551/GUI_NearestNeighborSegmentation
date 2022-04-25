@@ -1,5 +1,5 @@
 # GUI_NearestNeighborSegmentation
-最近傍識別による領域分割のGUIアプリケーションです。
+最近傍識別による領域分割のGUIアプリケーションです。　　
 Pythonで動きます。
 
 ## 利用方法
@@ -14,7 +14,23 @@ cd GUI_NearestNeighborSegmentation
 python3 main.py --img_path img/fox.jpg
 ```
 
-## 使用例
+## 使用例とボタンの説明
 <div align="center">
     <img src="gif/usage.gif">
 </div>
+
+画面上をドラッグすると矩形が描画され、矩形内部の画素を前景または背景の事例として記録します。　　
+「Segmentation ON」ボタンを押すことで、記録された事例を元に画像上の画素を分類し、領域分割を実行します。
+
+- Segmentation ON/OFFボタン（トグルボタン）
+「Segmentation ON」を押すと領域分割が行われ、画像上に領域マスクが描画されます。「Segmentation OFF」を押すと領域マスクが除去されます。
+
+- Resetボタン
+記録された事例が初期化され、領域マスクが描画されていれば除去されます。また、ラジオボタンの状態が前景に初期化されます。
+
+- Background/Foregroundボタン（ラジオボタン）
+各ボタンをクリックすることで、事例を記録する際に付与するラベルを切り替えられます。初期状態は「Foreground」です。
+
+## 注意
+- 領域分割は前景事例と背景事例の両方を記録してから行ってください。　　
+- 領域分割後に事例を追加して再度領域分割を行う場合は、「Segmentation OFF」ボタンを押して一度領域マスクを除去する必要があります（「Reset」ボタンを押さない限り、記録された事例は消去されません）。
