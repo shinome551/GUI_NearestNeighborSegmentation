@@ -16,5 +16,5 @@ python3 main.py --img_path img/fox.jpg
 
 ## 使用例
 <div align="center">
-    <img src="gif/usage.gif" width="40%">
+    <img src="gif/usage.gif">
 </div>
