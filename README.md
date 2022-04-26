@@ -11,7 +11,7 @@ tkinterとNumpy、Pillow、Cythonで動きます。
 Python  3.9.12
 numpy   1.22.3
 Pillow  8.4.0
-Cython  0.29.21
+Cython  0.29.28
 ```
 - tkinterが使えない場合  
 ```
