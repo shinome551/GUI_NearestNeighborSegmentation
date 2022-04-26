@@ -11,12 +11,12 @@ from cy.utils import updateLUT
 
 class Application(tkinter.Frame):
     label2color = np.array([
-        [  0, 255,   0], # background(initial label)
-        [255,   0,   0], # foreground1
-        [  0,   0, 255]  # foreground2(not implemented)
+        [  0,   0,   0, 255], # background(initial label)
+        [255,   0,   0, 128], # foreground1
+        [  0,   0, 255, 128]  # foreground2(not implemented)
     ])
     label2colorname = [
-        'green', # background(initial label)
+        'black', # background(initial label)
         'red', # foreground1
         'blue'  # foreground2(not implemented)
     ]
@@ -123,8 +123,9 @@ class Application(tkinter.Frame):
                 self.tlut[r, g, b] = self.label.get()
                 updateLUT(self.dlut, self.tlut)
 
-            self.segmentation()
-            self.mask_toggle_button.config(text='Hide Mask')
+            if len(np.unique(self.tlut)) > 1:
+                self.segmentation()
+                self.mask_toggle_button.config(text='Hide Mask')
         return hook
 
 
@@ -132,7 +133,9 @@ class Application(tkinter.Frame):
         r, g, b = np.split(np.array(self.img), 3, axis=2)
         img_label_np = self.tlut[r, g, b][:, :, 0]
         img_segmented_np = np.take(Application.label2color, img_label_np, axis=0).astype(np.uint8)
-        img_out = Image.blend(self.img, Image.fromarray(img_segmented_np), 0.5)
+        img_mask = Image.fromarray(img_segmented_np[:, :, :3])
+        img_alpha = Image.fromarray(img_segmented_np[:, :, 3])
+        img_out = Image.composite(self.img, img_mask, img_alpha)
         self.canvas.photo = ImageTk.PhotoImage(img_out)
         self.canvas.itemconfig(self.image_on_canvas, image=self.canvas.photo)
 
