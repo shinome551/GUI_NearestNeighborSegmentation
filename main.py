@@ -2,7 +2,6 @@
 
 import argparse
 import tkinter
-import tkinter.ttk
 
 from PIL import Image, ImageTk
 import numpy as np
@@ -12,13 +11,13 @@ from cy.utils import updateLUT
 
 class Application(tkinter.Frame):
     label2color = np.array([
-        [255,   0,   0], # background(initial label)
-        [  0, 255,   0], # foreground1
+        [  0, 255,   0], # background(initial label)
+        [255,   0,   0], # foreground1
         [  0,   0, 255]  # foreground2(not implemented)
     ])
     label2colorname = [
-        'red', # background(initial label)
-        'green', # foreground1
+        'green', # background(initial label)
+        'red', # foreground1
         'blue'  # foreground2(not implemented)
     ]
 
@@ -39,6 +38,7 @@ class Application(tkinter.Frame):
         # botton
         self.mask_toggle_button = tkinter.Button(self, 
             text='Visualize Mask',
+            width=10,
             command=self.toggleSegmentationMask())
         self.mask_toggle_button.grid(row=0, column=1)
 
@@ -48,13 +48,17 @@ class Application(tkinter.Frame):
         self.reset_button.grid(row=1, column=1)
 
         self.label_radio_1 = tkinter.Radiobutton(self,
-            text="Background",
+            text='Background',
+            foreground='white',
+            background=Application.label2colorname[0],
             value=0,
             variable=self.label)
         self.label_radio_1.grid(row=2, column=1)
 
         self.label_radio_2 = tkinter.Radiobutton(self,
-            text="Foreground",
+            text='Foreground',
+            foreground='white',
+            background=Application.label2colorname[1],
             value=1,
             variable=self.label)
         self.label_radio_2.grid(row=3, column=1)
@@ -135,9 +139,9 @@ class Application(tkinter.Frame):
 
     def reset(self):
         def hook():
-            self.label.set(1)
-            self.dlut = np.ones((256,256,256), dtype=np.uint16) * 255 * 3  ## initialize max distance
-            self.tlut = np.zeros((256,256,256), dtype=np.uint8)
+            self.label.set(1)                                              # initialize annotation label to foreground
+            self.dlut = np.ones((256,256,256), dtype=np.uint16) * 255 * 3  # initialize dlut to max distance
+            self.tlut = np.zeros((256,256,256), dtype=np.uint8)            # initialize tlut to background
             self.mask_toggle_button.config(text='Visualize Mask')
             self.canvas.delete("rect1")
             self.canvas.photo = ImageTk.PhotoImage(self.img)
@@ -154,4 +158,5 @@ if __name__ == '__main__':
 
     root = tkinter.Tk()
     app = Application(original_image, master=root)
+    root.resizable(width=False, height=False)
     app.mainloop()
