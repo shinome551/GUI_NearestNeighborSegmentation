@@ -1,6 +1,6 @@
 # GUI_NearestNeighborSegmentation
 <div align="center">
-    <img src="gif/usage.gif">
+    <img src="https://raw.githubusercontent.com/wiki/shinome551/GUI_NearestNeighborSegmentation/images/usage.gif">
 </div>
 
 最近傍識別による領域分割のGUIアプリケーションです。  
