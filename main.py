@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 
-import argparse
+import sys
 import tkinter
+from tkinter import filedialog
 
 from PIL import Image, ImageTk
 import numpy as np
@@ -21,13 +22,19 @@ class Application(tkinter.Frame):
         'blue'  # foreground2(not implemented)
     ]
 
-    def __init__(self, img, master=None):
+    def __init__(self, master=None):
         super().__init__(master)
-        self.img = img
         self.master = master
         self.master.title('Nearest Neighbor Segmentation')
         self.resize_ratio = 1.0
+
         self.label = tkinter.IntVar(value=1) # initialize label to foreground1
+        filename = filedialog.askopenfilename()
+        if filename == "":
+            sys.exit(1)
+        else:
+            img = Image.open(filename)
+            self.img = img
 
         self.pack()
         self.create_widgets()
@@ -40,12 +47,12 @@ class Application(tkinter.Frame):
             text='Visualize Mask',
             width=10,
             command=self.toggleSegmentationMask())
-        self.mask_toggle_button.grid(row=0, column=1)
+        self.mask_toggle_button.grid(row=0, column=2)
 
         self.reset_button = tkinter.Button(self, 
             text='Reset',
             command=self.reset())
-        self.reset_button.grid(row=1, column=1)
+        self.reset_button.grid(row=1, column=2)
 
         self.label_radio_1 = tkinter.Radiobutton(self,
             text='Background',
@@ -53,7 +60,7 @@ class Application(tkinter.Frame):
             background=Application.label2colorname[0],
             value=0,
             variable=self.label)
-        self.label_radio_1.grid(row=2, column=1)
+        self.label_radio_1.grid(row=2, column=2)
 
         self.label_radio_2 = tkinter.Radiobutton(self,
             text='Foreground',
@@ -61,11 +68,21 @@ class Application(tkinter.Frame):
             background=Application.label2colorname[1],
             value=1,
             variable=self.label)
-        self.label_radio_2.grid(row=3, column=1)
+        self.label_radio_2.grid(row=3, column=2)
+
+        self.save_button = tkinter.Button(self, 
+            text='Save',
+            command=self.save())
+        self.save_button.grid(row=0, column=0)
+
+        self.load_button = tkinter.Button(self, 
+            text='Load',
+            command=self.load_and_reset())
+        self.load_button.grid(row=1, column=0)
 
         # canvas
         self.canvas = tkinter.Canvas(self, width=self.img.width, height=self.img.height)
-        self.canvas.grid(row=0, column=0, rowspan=4)
+        self.canvas.grid(row=0, column=1, rowspan=4)
 
         self.canvas.bind("<ButtonPress-1>", self.getPressPoint())
         self.canvas.bind("<Button1-Motion>", self.drawRectangle())
@@ -78,12 +95,13 @@ class Application(tkinter.Frame):
     def toggleSegmentationMask(self):
         def hook():
             if self.mask_toggle_button.config('text')[-1] == 'Visualize Mask': 
-                self.segmentation()
+                img = self.segmentation()
                 self.mask_toggle_button.config(text='Hide Mask')
             else:
-                self.canvas.photo = ImageTk.PhotoImage(self.img)
-                self.canvas.itemconfig(self.image_on_canvas, image=self.canvas.photo)
+                img = self.img
                 self.mask_toggle_button.config(text='Visualize Mask')
+            self.canvas.photo = ImageTk.PhotoImage(img)
+            self.canvas.itemconfig(self.image_on_canvas, image=self.canvas.photo)
 
         return hook
 
@@ -124,7 +142,9 @@ class Application(tkinter.Frame):
                 updateLUT(self.dlut, self.tlut)
 
             if len(np.unique(self.tlut)) > 1:
-                self.segmentation()
+                img_out = self.segmentation()
+                self.canvas.photo = ImageTk.PhotoImage(img_out)
+                self.canvas.itemconfig(self.image_on_canvas, image=self.canvas.photo)
                 self.mask_toggle_button.config(text='Hide Mask')
         return hook
 
@@ -136,8 +156,32 @@ class Application(tkinter.Frame):
         img_mask = Image.fromarray(img_segmented_np[:, :, :3])
         img_alpha = Image.fromarray(img_segmented_np[:, :, 3])
         img_out = Image.composite(self.img, img_mask, img_alpha)
-        self.canvas.photo = ImageTk.PhotoImage(img_out)
-        self.canvas.itemconfig(self.image_on_canvas, image=self.canvas.photo)
+        return img_out
+        
+
+    def save(self):
+        def hook():
+            filename = filedialog.asksaveasfilename(
+                title = "Save File as",
+                filetypes = [("PNG", ".png"), ("Bitmap", ".bmp"), ("JPEG", ".jpg"), ("Tiff", ".tif") ],
+                initialdir = "./",
+                initialfile = 'outputs',
+                defaultextension = "png"
+            )
+            if filename != '':
+                img_out = self.segmentation()
+                img_out.save(filename)
+        return hook
+
+    
+    def load_and_reset(self):
+        def hook():
+            filename = filedialog.askopenfilename()
+            if filename != '':
+                img = Image.open(filename)
+                self.img = img
+                self.reset()()
+        return hook
 
 
     def reset(self):
@@ -153,13 +197,7 @@ class Application(tkinter.Frame):
 
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser()
-    parser.add_argument('--img_path')
-    args = parser.parse_args()
-
-    original_image = Image.open(args.img_path)
-
     root = tkinter.Tk()
-    app = Application(original_image, master=root)
+    app = Application(master=root)
     root.resizable(width=False, height=False)
     app.mainloop()
