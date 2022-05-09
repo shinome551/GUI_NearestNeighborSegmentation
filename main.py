@@ -1,13 +1,16 @@
 #!/usr/bin/env python3
 
+import argparse
 import sys
 import tkinter
 from tkinter import filedialog
+import math
 
 from PIL import Image, ImageTk
 import numpy as np
 
-from cy.utils import updateLUT
+import cy.utils as cy
+from pipeline import Pipeline
 
 
 class Application(tkinter.Frame):
@@ -22,23 +25,37 @@ class Application(tkinter.Frame):
         'blue'  # foreground2(not implemented)
     ]
 
-    def __init__(self, master=None):
+    def __init__(self, master=None, filename=None):
         super().__init__(master)
         self.master = master
         self.master.title('Nearest Neighbor Segmentation')
-        self.resize_ratio = 1.0
+        self.history_length = 20
 
+        if filename is None:
+            filename = filedialog.askopenfilename()
+            if filename == '':
+                sys.exit(1)
+        img = Image.open(filename)
+        self.img = img
         self.label = tkinter.IntVar(value=1) # initialize label to foreground1
-        filename = filedialog.askopenfilename()
-        if filename == "":
-            sys.exit(1)
-        else:
-            img = Image.open(filename)
-            self.img = img
 
         self.pack()
         self.create_widgets()
         self.reset()()
+
+
+    def reset(self):
+        def hook():
+            self.label.set(1)                                              # initialize annotation label to foreground
+            self.dlut = np.ones((256,256,256), dtype=np.uint16) * 255 * 3  # initialize dlut to max distance
+            self.tlut = np.zeros((256,256,256), dtype=np.uint8)            # initialize tlut to background
+            self.mask_toggle_button.config(text='Visualize Mask')
+            self.canvas.delete("rect1")
+            self.config_canvas(self.img)
+            self.coords_history = []
+            self.label_history = []
+            self.pipeline = Pipeline()
+        return hook
 
 
     def create_widgets(self):
@@ -46,7 +63,7 @@ class Application(tkinter.Frame):
         self.mask_toggle_button = tkinter.Button(self, 
             text='Visualize Mask',
             width=10,
-            command=self.toggleSegmentationMask())
+            command=self.toggle_segmentation_mask())
         self.mask_toggle_button.grid(row=0, column=2)
 
         self.reset_button = tkinter.Button(self, 
@@ -80,19 +97,31 @@ class Application(tkinter.Frame):
             command=self.load_and_reset())
         self.load_button.grid(row=1, column=0)
 
+        self.train_button = tkinter.Button(self, 
+            text='Train',
+            command=self.optimize())
+        self.train_button.grid(row=2, column=0)
+
         # canvas
         self.canvas = tkinter.Canvas(self, width=self.img.width, height=self.img.height)
         self.canvas.grid(row=0, column=1, rowspan=4)
 
-        self.canvas.bind("<ButtonPress-1>", self.getPressPoint())
-        self.canvas.bind("<Button1-Motion>", self.drawRectangle())
-        self.canvas.bind("<ButtonRelease-1>", self.registerExamplewithLabel())
+        self.canvas.bind("<ButtonPress-1>", self.get_press_point())
+        self.canvas.bind("<Button1-Motion>", self.draw_rectangle())
+        self.canvas.bind("<ButtonRelease-1>", self.register_example_and_label())
     
-        self.canvas.photo = ImageTk.PhotoImage(self.img)
-        self.image_on_canvas = self.canvas.create_image(0, 0, anchor='nw', image=self.canvas.photo)
+        self.config_canvas(self.img)
+
+    
+    def config_canvas(self, img):
+        self.canvas.photo = ImageTk.PhotoImage(img)
+        if hasattr(self, 'image_on_canvas'):
+            self.canvas.itemconfig(self.image_on_canvas, image=self.canvas.photo)
+        else:
+            self.image_on_canvas = self.canvas.create_image(0, 0, anchor='nw', image=self.canvas.photo)
 
 
-    def toggleSegmentationMask(self):
+    def toggle_segmentation_mask(self):
         def hook():
             if self.mask_toggle_button.config('text')[-1] == 'Visualize Mask': 
                 img = self.segmentation()
@@ -100,13 +129,11 @@ class Application(tkinter.Frame):
             else:
                 img = self.img
                 self.mask_toggle_button.config(text='Visualize Mask')
-            self.canvas.photo = ImageTk.PhotoImage(img)
-            self.canvas.itemconfig(self.image_on_canvas, image=self.canvas.photo)
-
+            self.config_canvas(img)
         return hook
 
 
-    def getPressPoint(self):
+    def get_press_point(self):
         def hook(event):
             self.canvas.delete("rect1")
             self.canvas.create_rectangle(
@@ -121,7 +148,7 @@ class Application(tkinter.Frame):
         return hook
 
 
-    def drawRectangle(self):
+    def draw_rectangle(self):
         def hook(event):
             end_x = max(0, min(self.img.width, event.x))
             end_y = max(0, min(self.img.height, event.y))
@@ -129,28 +156,42 @@ class Application(tkinter.Frame):
         return hook
 
 
-    def registerExamplewithLabel(self):
+    def register_with_LUT(self, coords, label):
+        feature_map = self.pipeline(self.img, coords)
+        r, g, b = np.split(feature_map, 3, axis=2)
+        self.dlut[r, g, b] = 0
+        self.tlut[r, g, b] = label
+        cy.updateLUT(self.dlut, self.tlut)
+
+
+    def register_example_and_label(self):
         def hook(event):
             coords = [
-                round(n * self.resize_ratio) for n in self.canvas.coords("rect1")
+                n for n in self.canvas.coords("rect1")
             ]
+            # area check
             if (coords[2] - coords[0]) * (coords[3] - coords[1]) > 0:
-                img_crop_np = np.array(self.img.crop(coords), dtype=np.uint8)
-                r, g, b = np.split(img_crop_np, 3, axis=2)
-                self.dlut[r, g, b] = 0
-                self.tlut[r, g, b] = self.label.get()
-                updateLUT(self.dlut, self.tlut)
+                label = self.label.get()
+                self.register_with_LUT(coords, label)
+                # record
+                self.coords_history.append(coords)
+                self.label_history.append(label)
+                # delete old history by FIFO
+                if len(self.coords_history) > self.history_length:
+                    self.coords_history.pop()
+                    self.label_history.pop()
 
+            # segmentation
             if len(np.unique(self.tlut)) > 1:
                 img_out = self.segmentation()
-                self.canvas.photo = ImageTk.PhotoImage(img_out)
-                self.canvas.itemconfig(self.image_on_canvas, image=self.canvas.photo)
+                self.config_canvas(img_out)
                 self.mask_toggle_button.config(text='Hide Mask')
         return hook
 
 
     def segmentation(self):
-        r, g, b = np.split(np.array(self.img), 3, axis=2)
+        feature_map = self.pipeline(self.img)
+        r, g, b = np.split(feature_map, 3, axis=2)
         img_label_np = self.tlut[r, g, b][:, :, 0]
         img_segmented_np = np.take(Application.label2color, img_label_np, axis=0).astype(np.uint8)
         img_mask = Image.fromarray(img_segmented_np[:, :, :3])
@@ -184,20 +225,28 @@ class Application(tkinter.Frame):
         return hook
 
 
-    def reset(self):
+    def register_lut_with_new_model(self):
+        self.dlut = np.ones((256,256,256), dtype=np.uint16) * 255 * 3  # initialize dlut to max distance
+        self.tlut = np.zeros((256,256,256), dtype=np.uint8)            # initialize tlut to background
+        for coords, label in zip(self.coords_history, self.label_history):
+            self.register_with_LUT(coords, label)
+
+
+    def optimize(self):
         def hook():
-            self.label.set(1)                                              # initialize annotation label to foreground
-            self.dlut = np.ones((256,256,256), dtype=np.uint16) * 255 * 3  # initialize dlut to max distance
-            self.tlut = np.zeros((256,256,256), dtype=np.uint8)            # initialize tlut to background
-            self.mask_toggle_button.config(text='Visualize Mask')
-            self.canvas.delete("rect1")
-            self.canvas.photo = ImageTk.PhotoImage(self.img)
-            self.canvas.itemconfig(self.image_on_canvas, image=self.canvas.photo)
+            self.pipeline.optimize(self.img, self.coords_history, self.label_history)
+            self.register_lut_with_new_model()
+            img_out = self.segmentation()
+            self.config_canvas(img_out)
         return hook
 
 
 if __name__ == '__main__':
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--img_path')
+    args = parser.parse_args()
+
     root = tkinter.Tk()
-    app = Application(master=root)
+    app = Application(master=root, filename=args.img_path)
     root.resizable(width=False, height=False)
     app.mainloop()
