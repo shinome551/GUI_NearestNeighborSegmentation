@@ -11,7 +11,7 @@ from torchvision import transforms
 class Encoder(nn.Module):
     def __init__(self):
         super().__init__()
-        self.layer1 = nn.Conv2d(3, 3, kernel_size=3, padding=1, stride=1, bias=False)
+        self.layer1 = nn.Conv2d(3, 3, kernel_size=5, padding=2, stride=1, bias=False)
 
     def forward(self, x):
         x = self.layer1(x)
@@ -48,8 +48,8 @@ class Pipeline(nn.Module):
 
     def optimize(self, img, coords_history, label_history, num_step=5):
         self.model.train()
-        self.optimizer.zero_grad()
         for i in range(num_step):
+            self.optimizer.zero_grad()
             # shuffle
             pair = list(zip(coords_history, label_history))
             random.shuffle(pair)
