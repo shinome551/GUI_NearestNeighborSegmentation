@@ -19,6 +19,7 @@ numpy   1.22.3
 Pillow  8.4.0
 Cython  0.29.28
 ```
+Windowsで実行する場合はC++のコンパイラ（MinGWなど）が必要です。
 - tkinterが使えない場合  
 ```
 # for ubuntu
